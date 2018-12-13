@@ -83,24 +83,146 @@ function StoryTechShopProbe.ProbeZ()
 	StoryTechShopProbe.internal.Log("Probing Z-axis with %s.", profile.Name)
 	StoryTechShopProbe.internal.PrepareMachineState(profile)
 	
+	local probeHeight, probeStrikeZ, fixtureOffsetZ, success = false
 	if StoryTechShopProbe.internal.ProbeCycle('Z', -1, profile) and
 		StoryTechShopProbe.internal.ProbeRetract('Z', profile.Retract, profile)
 	then
-		fixtureOffsetZ = StoryTechShopProbe.internal.ProbeStrikePosition('Z')
-		fixtureOffsetZ = fixtureOffsetZ - StoryTechShopProbe.internal.ConvertToUnit(profile.ProbeHeight, profile)
-		
-		StoryTechShopProbe.internal.Debug("Setting fixture Z-axis offset set to %.4f.", fixtureOffsetZ)
-		rc = mc.mcAxisSetMachinePos(inst, mc.Z_AXIS, fixtureOffsetZ)
-		StoryTechShopProbe.internal.Log("Probe was successful, fixutre Z-axis offset set to %.4f.", fixtureOffsetZ)
+		probeHeight = StoryTechShopProbe.internal.ConvertToUnit(profile.ProbeHeight, profile)
+		probeStrikeZ = StoryTechShopProbe.internal.ProbeStrikePosition('Z')
+		fixtureOffsetZ = probeStrikeZ - probeHeight
+		success = true
 	end
 	
 	StoryTechShopProbe.internal.RestoreMachineState()
+	if success then
+		StoryTechShopProbe.internal.Debug("Setting fixture Z-axis offset set to %.4f (probe strike at %.4f, probe height is %.4f).", fixtureOffsetZ, probeStrikeZ, probeHeight)
+		if StoryTechShopProbe.internal.SetFixtureOffsets(nil, nil, fixtureOffsetZ) then
+			StoryTechShopProbe.internal.Log("Probe successful, fixture offset set to Z%.4f.", fixtureOffsetZ)
+		end
+	end
 end
 function StoryTechShopProbe.ProbeXY()
-
+	inst = mc.mcGetInstance()
+	
+	profile = StoryTechShopProbe.internal.SelectedProfile()
+	if profile == nil then
+		StoryTechShopProbe.internal.Log("ERROR: No probe profile selected or was not found.")
+		return false
+	end
+	
+	StoryTechShopProbe.internal.Log("Probing X-axis and Y-axis with %s.", profile.Name)
+	StoryTechShopProbe.internal.PrepareMachineState(profile)
+	
+	local probeHeight,
+		probeStrikeXp, probeStrikeXn,
+		probeStrikeYp, probeStrikeYn,
+		fixtureOffsetX, fixtureOffsetY, success
+	success = true
+	
+	if success and StoryTechShopProbe.internal.ProbeCycle('X', -1, profile) then
+		probeStrikeXn = StoryTechShopProbe.internal.ProbeStrikePosition('X')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('X', 1, profile) then
+		probeStrikeXp = StoryTechShopProbe.internal.ProbeStrikePosition('X')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('Y', -1, profile) then
+		probeStrikeYn = StoryTechShopProbe.internal.ProbeStrikePosition('Y')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('Y', 1, profile) then
+		probeStrikeYp = StoryTechShopProbe.internal.ProbeStrikePosition('Y')
+	else
+		success = false
+	end
+	
+	if success and StoryTechShopProbe.internal.ProbeRetract('Z', profile.Retract, profile) then
+		holeXOrigin = StoryTechShopProbe.internal.ConvertToUnit(profile.HoleXOrigin, profile)
+		holeYOrigin = StoryTechShopProbe.internal.ConvertToUnit(profile.HoleYOrigin, profile)
+		
+		fixtureOffsetX = probeStrikeXp - ((probeStrikeXp - probeStrikeXn)/2) - holeXOrigin
+		fixtureOffsetY = probeStrikeYp - ((probeStrikeYp - probeStrikeYn)/2) - holeYOrigin
+	else
+		success = false
+	end
+	
+	StoryTechShopProbe.internal.RestoreMachineState()
+	if success then
+		StoryTechShopProbe.internal.Debug("Setting fixture X-axis offset set to %.4f and Y-axis offset set to %.4f.", fixtureOffsetX, fixtureOffsetY)
+		if StoryTechShopProbe.internal.SetFixtureOffsets(fixtureOffsetX, fixtureOffsetY, nil) then
+			StoryTechShopProbe.internal.Log("Probe successful, fixture offset set to X%.4f Y%.4f.", fixtureOffsetX, fixtureOffsetY)
+		end
+	end
 end
 function StoryTechShopProbe.ProbeZXY()
-
+	inst = mc.mcGetInstance()
+	
+	profile = StoryTechShopProbe.internal.SelectedProfile()
+	if profile == nil then
+		StoryTechShopProbe.internal.Log("ERROR: No probe profile selected or was not found.")
+		return false
+	end
+	
+	StoryTechShopProbe.internal.Log("Probing X-axis and Y-axis with %s.", profile.Name)
+	StoryTechShopProbe.internal.PrepareMachineState(profile)
+	
+	local probeHeight,
+		probeStrikeZ,
+		probeStrikeXp, probeStrikeXn,
+		probeStrikeYp, probeStrikeYn,
+		fixtureOffsetZ, fixtureOffsetX, fixtureOffsetY, success
+	success = true
+	
+	if success and StoryTechShopProbe.internal.ProbeCycle('Z', -1, profile) then
+		probeStrikeZ = StoryTechShopProbe.internal.ProbeStrikePosition('Z')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('X', -1, profile) then
+		probeStrikeXn = StoryTechShopProbe.internal.ProbeStrikePosition('X')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('X', 1, profile) then
+		probeStrikeXp = StoryTechShopProbe.internal.ProbeStrikePosition('X')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('Y', -1, profile) then
+		probeStrikeYn = StoryTechShopProbe.internal.ProbeStrikePosition('Y')
+	else
+		success = false
+	end
+	if success and StoryTechShopProbe.internal.ProbeCycle('Y', 1, profile) then
+		probeStrikeYp = StoryTechShopProbe.internal.ProbeStrikePosition('Y')
+	else
+		success = false
+	end
+	
+	if success and StoryTechShopProbe.internal.ProbeRetract('Z', profile.Retract, profile) then
+		probeHeight = StoryTechShopProbe.internal.ConvertToUnit(profile.ProbeHeight, profile)
+		probeHoleDepth = StoryTechShopProbe.internal.ConvertToUnit(profile.HoleDepth, profile)
+		holeXOrigin = StoryTechShopProbe.internal.ConvertToUnit(profile.HoleXOrigin, profile)
+		holeYOrigin = StoryTechShopProbe.internal.ConvertToUnit(profile.HoleYOrigin, profile)
+		
+		fixtureOffsetZ = probeStrikeZ - (probeHeight - probeHoleDepth)
+		fixtureOffsetX = probeStrikeXp - ((probeStrikeXp - probeStrikeXn)/2) - holeXOrigin
+		fixtureOffsetY = probeStrikeYp - ((probeStrikeYp - probeStrikeYn)/2) - holeYOrigin
+	else
+		success = false
+	end
+	
+	StoryTechShopProbe.internal.RestoreMachineState()
+	if success then
+		StoryTechShopProbe.internal.Debug("Setting fixture X-axis offset set to %.4f, Y-axis offset set to %.4f and Z-axis offset set to %.4f.", fixtureOffsetX, fixtureOffsetY, fixtureOffsetZ)
+		if StoryTechShopProbe.internal.SetFixtureOffsets(fixtureOffsetX, fixtureOffsetY, fixtureOffsetZ) then
+			StoryTechShopProbe.internal.Log("Probe successful, fixture offset set to X%.4f Y%.4f Z%.4f.", fixtureOffsetX, fixtureOffsetY, fixtureOffsetZ)
+		end
+	end
 end
 
 function StoryTechShopProbe.internal.ExecuteGCode(gCode)
@@ -148,7 +270,7 @@ end
 
 function StoryTechShopProbe.internal.ProbeAxis(axis, direction, feedrate, profile)
 	inst = mc.mcGetInstance()
-	-- Probe Z
+	StoryTechShopProbe.internal.Debug("Probing %s-axis in %d direction.", axis, direction)
 	distance = profile.MaxTravel*direction
 	rc = StoryTechShopProbe.internal.ExecuteGCode(string.format("G%.1f %s%.4f F%.1f", profile.Probe, axis, distance, feedrate))
 	if rc ~= mc.MERROR_NOERROR then
@@ -167,7 +289,8 @@ end
 function StoryTechShopProbe.internal.ProbeRetract(axis, distance, profile)
 	inst = mc.mcGetInstance()
 	
-	rc = StoryTechShopProbe.internal.ExecuteGCode(inst, string.format("G0 %s%.4f", axis, distance))
+	StoryTechShopProbe.internal.Debug("Retracting %s-axis by %.4f.", axis, distance)
+	rc = StoryTechShopProbe.internal.ExecuteGCode(string.format("G0 %s%.4f", axis, distance))
 	if rc ~= mc.MERROR_NOERROR then
 		StoryTechShopProbe.internal.Log("ERROR: Failed to retract %s-axis.", axis)
 		return false
@@ -181,27 +304,65 @@ function StoryTechShopProbe.internal.ProbeRetract(axis, distance, profile)
 end
 
 function StoryTechShopProbe.internal.ProbeStrikePosition(axis)
+	inst = mc.mcGetInstance()
+	value = nil
 	if (axis == 'X') then
-		return mc.mcAxisGetProbePos(Instance, mc.X_AXIS, 1)
+		value, rc = mc.mcAxisGetProbePos(inst, mc.X_AXIS, 1)
 	elseif (axis == 'Y') then
-		return mc.mcAxisGetProbePos(Instance, mc.Y_AXIS, 1)
+		value, rc = mc.mcAxisGetProbePos(inst, mc.Y_AXIS, 1)
 	elseif (axis == 'Z') then
-		return mc.mcAxisGetProbePos(Instance, mc.Z_AXIS, 1)
+		value, rc = mc.mcAxisGetProbePos(inst, mc.Z_AXIS, 1)
 	end
+	return value
 end
 
 function StoryTechShopProbe.internal.ConvertToUnit(units, profile)
 	inst = mc.mcGetInstance()
 	defaultUnit = mc.mcCntlGetUnitsDefault(inst)
 	
-	if defaultUnit == 20 and profile.Unit == 21 then
+	if (defaultUnit == 20 or defaultUnit == 200) and profile.Unit == 21 then
 		-- convert mm to in
 		return units / 25.4
-	elseif defaultUnit == 21 and profile.Unit == 20 then
+	elseif (defaultUnit == 21 or defaultUnit == 210) and profile.Unit == 20 then
 		-- convert in to mm
 		return units * 25.4
 	end
 	return units
+end
+
+function StoryTechShopProbe.internal.TruncateNumber(num, dec)
+	return tonumber(string.format("%."..dec.."f", num))
+end
+
+function StoryTechShopProbe.internal.SetFixtureOffsets(offsetX, offsetY, offsetZ)
+	inst = mc.mcGetInstance()
+	
+	varX, varY, varZ, fixtureNumber, currentFixture = StoryTechShopProbe.internal.GetFixOffsetVars()
+	
+	success = true
+	if success and (offsetX ~= nil) then
+		rc = mc.mcCntlSetPoundVar(inst, varX, offsetX)
+		if rc ~= mc.MERROR_NOERROR then
+			StoryTechShopProbe.internal.Log("ERROR: Failed to set fixture X-axis offset to %.4f.", offsetX)
+			success = false
+		end
+	end
+	if success and (offsetY ~= nil) then
+		rc = mc.mcCntlSetPoundVar(inst, varY, offsetY)
+		if rc ~= mc.MERROR_NOERROR then
+			StoryTechShopProbe.internal.Log("ERROR: Failed to set fixture Y-axis offset to %.4f.", offsetY)
+			success = false
+		end
+	end
+	if success and (offsetZ ~= nil) then
+		rc = mc.mcCntlSetPoundVar(inst, varZ, offsetZ)
+		if rc ~= mc.MERROR_NOERROR then
+			StoryTechShopProbe.internal.Log("ERROR: Failed to set fixture Z-axis offset to %.4f.", offsetZ)
+			success = false
+		end
+	end
+	
+	return success
 end
 
 --- Find probe profile by name
@@ -396,6 +557,22 @@ function StoryTechShopProbe.internal.ConnectUI()
 			event:Skip()
 		end
 	)
+	
+	StoryTechShopProbe.UI.btnProbeOpXY:Connect( wx.wxEVT_COMMAND_BUTTON_CLICKED,
+		function(event)
+			StoryTechShopProbe.internal.co = coroutine.create(StoryTechShopProbe.ProbeXY)
+			-- StoryTechShopProbe.ProbeXY()
+			event:Skip()
+		end
+	)
+	
+	StoryTechShopProbe.UI.btnProbeOpZXY:Connect( wx.wxEVT_COMMAND_BUTTON_CLICKED,
+		function(event)
+			StoryTechShopProbe.internal.co = coroutine.create(StoryTechShopProbe.ProbeZXY)
+			-- StoryTechShopProbe.ProbeZXY()
+			event:Skip()
+		end
+	)
 end
 
 function StoryTechShopProbe.internal.Log(message, ...)
@@ -473,6 +650,39 @@ function StoryTechShopProbe.internal.InitUI(mcLuaPanel)
 
 	StoryTechShopProbe.UI.Panel:SetSizer( StoryTechShopProbe.UI.fgCtnrProbe )
 	StoryTechShopProbe.UI.Panel:Layout()
+end
+
+---------------------------------------------------------------
+-- Sourced from Screen Set load script
+-- Get fixtue offset pound variables function Updated 5-16-16
+---------------------------------------------------------------
+function StoryTechShopProbe.internal.GetFixOffsetVars()
+	inst = mc.mcGetInstance()
+	
+    local FixOffset = mc.mcCntlGetPoundVar(inst, mc.SV_MOD_GROUP_14)
+    local Pval = mc.mcCntlGetPoundVar(inst, mc.SV_BUFP)
+    local FixNum, whole, frac
+
+    if (FixOffset ~= 54.1) then --G54 through G59
+        whole, frac = math.modf (FixOffset)
+        FixNum = (whole - 53) 
+        PoundVarX = ((mc.SV_FIXTURES_START - mc.SV_FIXTURES_INC) + (FixNum * mc.SV_FIXTURES_INC))
+        CurrentFixture = string.format('G' .. tostring(FixOffset)) 
+    else --G54.1 P1 through G54.1 P100
+        FixNum = (Pval + 6)
+        CurrentFixture = string.format('G54.1 P' .. tostring(Pval))
+        if (Pval > 0) and (Pval < 51) then -- G54.1 P1 through G54.1 P50
+            PoundVarX = ((mc.SV_FIXTURE_EXPAND - mc.SV_FIXTURES_INC) + (Pval * mc.SV_FIXTURES_INC))
+        elseif (Pval > 50) and (Pval < 101) then -- G54.1 P51 through G54.1 P100
+            PoundVarX = ((mc.SV_FIXTURE_EXPAND2 - mc.SV_FIXTURES_INC) + (Pval * mc.SV_FIXTURES_INC))	
+        end
+    end
+	PoundVarY = (PoundVarX + 1)
+	PoundVarZ = (PoundVarX + 2)
+	return PoundVarX, PoundVarY, PoundVarZ, FixNum, CurrentFixture
+	--PoundVar(Axis) returns the pound variable for the current fixture for that axis (not the pound variables value).
+	--CurretnFixture returned as a string (examples G54, G59, G54.1 P12).
+	--FixNum returns a simple number (1-106) for current fixture (examples G54 = 1, G59 = 6, G54.1 P1 = 7, etc).
 end
 
 if mc.mcInEditor() == 1 then
